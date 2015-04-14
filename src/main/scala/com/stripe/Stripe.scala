@@ -129,6 +129,7 @@ abstract class APIResource {
 
   def request(method: String, url: String, params: Map[String,_] = Map.empty): json.JValue = {
     val (rBody, rCode) = rawRequest(method, url, params)
+    System.out.println( "RESPONSE : " + rBody )
     interpretResponse(rBody, rCode)
   }
 
@@ -164,24 +165,47 @@ abstract class APIResource {
 case class ErrorContainer(error: Error)
 case class Error(`type`: String, message: String, code: Option[String], param: Option[String])
 
-case class CardCollection(count: Int, data: List[Card])
+case class CardCollection(
+  `object` : String,
+  total_count : Int,
+  has_more : Boolean,
+  url : String,
+  data : List[Option[Card]]
+  )
+
+case class SubscriptionCollection(
+                           `object` : String,
+                           total_count : Int,
+                           has_more : Boolean,
+                           url : String,
+                           data : List[Option[Subscription]]
+                           )
 
 case class Card(
   last4: String,
-  `type`: String,
-  expMonth: Int,
-  expYear: Int,
+  `object`: String,
+  exp_month: Int,
+  exp_year: Int,
   fingerprint: String,
+  id: Option[String],
+  brand: Option[String],
+  funding: Option[String],
   country: Option[String],
   name: Option[String] = None,
-  addressLine1: Option[String] = None,
-  addressLine2: Option[String] = None,
-  addressZip: Option[String] = None,
-  addressState: Option[String] = None,
-  addressCountry: Option[String] = None,
-  cvcCheck: Option[String] = None,
-  addressLine1Check: Option[String] = None,
-  addressZipCheck: Option[String] = None) extends APIResource
+  number: Option[String] = None,
+  cvc: Option[String] = None,
+  customer: Option[String] = None,
+  address_line1: Option[String] = None,
+  address_line1_check: Option[String] = None,
+  address_line2: Option[String] = None,
+  address_zip: Option[String] = None,
+  address_state: Option[String] = None,
+  address_city: Option[String] = None,
+  address_country: Option[String] = None,
+  cvc_check: Option[String] = None,
+  dynamic_last4: Option[String] = None,
+  recipient: Option[String] = None,
+  address_zip_check: Option[String] = None) extends APIResource
 
 case class Charge(
   created: Long,
@@ -220,31 +244,38 @@ object Charge extends APIResource {
 }
 
 case class Customer(
-  created: Long,
-  id: String,
-  livemode: Boolean,
+  created: Option[Long],
+  id: Option[String],
+  livemode: Option[Boolean],
+  `object`: Option[String],
   description: Option[String],
-  cards: CardCollection,
-  defaultCard: Option[String],
-  email: Option[String],
+  currency: Option[String],
+  sources: Option[CardCollection],
+  source: Option[Card],
+  subscriptions : Option[SubscriptionCollection],
+  default_source: Option[String],
+  email : Option[String],
+  metadata : Map[String,Any],
+  plan : Option[String],
+  quantity: Option[String],
   delinquent: Option[Boolean],
   subscription: Option[Subscription],
-  discount: Option[Discount],
-  accountBalance: Option[Int]) extends APIResource {
+  discount: Option[String],
+  account_balance: Option[Int]) extends APIResource {
   def update(params: Map[String,_]): Customer = {
-    request("POST", instanceURL(this.id), params).extract[Customer]
+    request("POST", instanceURL(this.id.get), params).extract[Customer]
   }
 
   def delete(): DeletedCustomer = {
-    request("DELETE", instanceURL(this.id)).extract[DeletedCustomer]
+    request("DELETE", instanceURL(this.id.get)).extract[DeletedCustomer]
   }
 
   def updateSubscription(params: Map[String,_]): Subscription = {
-    request("POST", "%s/subscription".format(instanceURL(id)), params).extract[Subscription]
+    request("POST", "%s/subscription".format(instanceURL(id.get)), params).extract[Subscription]
   }
 
   def cancelSubscription(params: Map[String,_] = Map.empty): Subscription = {
-    request("DELETE", "%s/subscription".format(instanceURL(id)), params).extract[Subscription]
+    request("DELETE", "%s/subscription".format(instanceURL(id.get)), params).extract[Subscription]
   }
 }
 
@@ -318,9 +349,10 @@ case class Subscription(
 case class NextRecurringCharge(amount: Int, date: String)
 
 case class Discount(
-  id: String,
+  `object`: String,
   coupon: String,
   start: Long,
+  subcription: Long,
   customer: String,
   end: Option[Long]) extends APIResource {
 }
