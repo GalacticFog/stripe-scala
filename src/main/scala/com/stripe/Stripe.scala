@@ -57,6 +57,39 @@ abstract class APIResource {
     }
   }
 
+  //this function will take a case class and any nested case classes and turn them into
+  //a map of maps.  This is useful for our parameterization of REST calls for sending into a query string
+
+  def makeParams( cc : AnyRef ) : Map[String,Any] = {
+
+    //System.out.println( "cc : : " + cc.toString() )
+
+    (Map[String, Any]() /: cc.getClass.getDeclaredFields) { (a, f) =>
+      f.setAccessible(true)
+      f.get(cc) match {
+        case Some( v : AnyRef ) => {
+          if (v.getClass.getInterfaces.find(_ == classOf[scala.Product]) != None) {
+            //System.out.println( "Match Some(v : AnyRef)(case): " + f.getName() + " : " + v.toString() )
+            a + (f.getName -> makeParams(v))
+          }
+          else {
+            //System.out.println( "Match Some(v : AnyRef)(non-case): " + f.getName() + " : " + v.toString() )
+            a + (f.getName -> v)
+          }
+        }
+        case Some(v) => {
+          //System.out.println( "Match Some(v): " + f.getName() + " : " + v.toString() )
+          a + (f.getName -> v)
+        }
+        case None => a
+        case v => {
+          //System.out.println( "Match v: " + f.getName() + " : " + v.toString() )
+          a + (f.getName -> v)
+        }
+      }
+    }
+  }
+
   def httpClient: DefaultHttpClient = {
     if (apiKey == null || apiKey.isEmpty) {
       throw AuthenticationException("No API key provided. (HINT: set your API key using 'stripe.apiKey = <API-KEY>'. You can generate API keys from the Stripe web interface. See https://stripe.com/api for details or email support@stripe.com if you have questions.")
@@ -128,7 +161,10 @@ abstract class APIResource {
   }
 
   def request(method: String, url: String, params: Map[String,_] = Map.empty): json.JValue = {
+    //@debug
+    System.out.println( "PARAMS : " + params.toString() )
     val (rBody, rCode) = rawRequest(method, url, params)
+    //@debug
     System.out.println( "RESPONSE : " + rBody )
     interpretResponse(rBody, rCode)
   }
@@ -182,15 +218,15 @@ case class SubscriptionCollection(
                            )
 
 case class Card(
-  last4: String,
-  `object`: String,
-  exp_month: Int,
-  exp_year: Int,
-  fingerprint: String,
-  id: Option[String],
-  brand: Option[String],
-  funding: Option[String],
-  country: Option[String],
+  last4: Option[String] = None,
+  `object`: Option[String] = None,
+  exp_month: Option[Int] = None,
+  exp_year: Option[Int] = None,
+  fingerprint: Option[String] = None,
+  id: Option[String] = None,
+  brand: Option[String] = None,
+  funding: Option[String] = None,
+  country: Option[String] = None,
   name: Option[String] = None,
   number: Option[String] = None,
   cvc: Option[String] = None,
@@ -255,7 +291,7 @@ case class Customer(
   subscriptions : Option[SubscriptionCollection],
   default_source: Option[String],
   email : Option[String],
-  metadata : Map[String,Any],
+  metadata : Option[Map[String,Any]],
   plan : Option[String],
   quantity: Option[String],
   delinquent: Option[Boolean],
@@ -284,7 +320,10 @@ case class DeletedCustomer(id: String, deleted: Boolean)
 case class CustomerCollection(count: Int, data: List[Customer])
 
 object Customer extends APIResource {
-  def create(params: Map[String,_]): Customer = {
+
+  def create( body : String ): Customer = {
+    val customer = json.parse( body ).extract[Customer]
+    val params = makeParams( customer )
     request("POST", classURL, params).extract[Customer]
   }
 
