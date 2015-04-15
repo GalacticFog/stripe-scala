@@ -57,39 +57,6 @@ abstract class APIResource {
     }
   }
 
-  //this function will take a case class and any nested case classes and turn them into
-  //a map of maps.  This is useful for our parameterization of REST calls for sending into a query string
-
-  def makeParams( cc : AnyRef ) : Map[String,Any] = {
-
-    //System.out.println( "cc : : " + cc.toString() )
-
-    (Map[String, Any]() /: cc.getClass.getDeclaredFields) { (a, f) =>
-      f.setAccessible(true)
-      f.get(cc) match {
-        case Some( v : AnyRef ) => {
-          if (v.getClass.getInterfaces.find(_ == classOf[scala.Product]) != None) {
-            //System.out.println( "Match Some(v : AnyRef)(case): " + f.getName() + " : " + v.toString() )
-            a + (f.getName -> makeParams(v))
-          }
-          else {
-            //System.out.println( "Match Some(v : AnyRef)(non-case): " + f.getName() + " : " + v.toString() )
-            a + (f.getName -> v)
-          }
-        }
-        case Some(v) => {
-          //System.out.println( "Match Some(v): " + f.getName() + " : " + v.toString() )
-          a + (f.getName -> v)
-        }
-        case None => a
-        case v => {
-          //System.out.println( "Match v: " + f.getName() + " : " + v.toString() )
-          a + (f.getName -> v)
-        }
-      }
-    }
-  }
-
   def httpClient: DefaultHttpClient = {
     if (apiKey == null || apiKey.isEmpty) {
       throw AuthenticationException("No API key provided. (HINT: set your API key using 'stripe.apiKey = <API-KEY>'. You can generate API keys from the Stripe web interface. See https://stripe.com/api for details or email support@stripe.com if you have questions.")
@@ -171,15 +138,61 @@ abstract class APIResource {
 
   val CamelCaseRegex = new Regex("(_.)")
 
-  def interpretResponse(rBody: String, rCode: Int): json.JValue = {
-    val jsonAST = json.parse(rBody).transform {
+  def getJsonAST( rBody : String ) : json.JValue = {
+    json.parse(rBody).transform {
       //converts json camel_case field names to Scala camelCase field names
       case json.JField(fieldName, x) => json.JField(CamelCaseRegex.replaceAllIn(
         fieldName, (m: Regex.Match) => m.matched.substring(1).toUpperCase), x)
     }
+  }
+
+  def interpretResponse(rBody: String, rCode: Int): json.JValue = {
+    val jsonAST = getJsonAST( rBody )
     if (rCode < 200 || rCode >= 300) handleAPIError(rBody, rCode, jsonAST)
     jsonAST
   }
+
+  //we need to go from scalaCamel to internet_camel
+  val ReverseCamelCaseRegex = new Regex("[A-Z]")
+  def undoCamel( camel : String ) : String = {
+    ReverseCamelCaseRegex.replaceAllIn( camel, (m:Regex.Match) => {
+      "_" + m.matched.charAt(0).toLower
+    })
+  }
+
+  //this function will take a case class and any nested case classes and turn them into
+  //a map of maps.  This is useful for our parameterization of REST calls for sending into a query string
+  def makeParams( cc : AnyRef ) : Map[String,Any] = {
+
+    //System.out.println( "cc : : " + cc.toString() )
+
+    (Map[String, Any]() /: cc.getClass.getDeclaredFields) { (a, f) =>
+      f.setAccessible(true)
+      f.get(cc) match {
+        case Some( v : AnyRef ) => {
+          if (v.getClass.getInterfaces.find(_ == classOf[scala.Product]) != None) {
+            //System.out.println( "Match Some(v : AnyRef)(case): " + f.getName() + " : " + v.toString() )
+            a + (undoCamel(f.getName) -> makeParams(v))
+          }
+          else {
+            //System.out.println( "Match Some(v : AnyRef)(non-case): " + f.getName() + " : " + v.toString() )
+            a + (undoCamel(f.getName) -> v)
+          }
+        }
+        case Some(v) => {
+          //System.out.println( "Match Some(v): " + f.getName() + " : " + v.toString() )
+          a + (undoCamel(f.getName) -> v)
+        }
+        case None => a
+        case v => {
+          //System.out.println( "Match v: " + f.getName() + " : " + v.toString() )
+          a + (undoCamel(f.getName) -> v)
+        }
+      }
+    }
+  }
+
+
 
   def handleAPIError(rBody: String, rCode: Int, jsonAST: json.JValue) {
     val error = try {
@@ -203,16 +216,16 @@ case class Error(`type`: String, message: String, code: Option[String], param: O
 
 case class CardCollection(
   `object` : String,
-  total_count : Int,
-  has_more : Boolean,
+  totalCount : Int,
+  hasMore : Boolean,
   url : String,
   data : List[Option[Card]]
   )
 
 case class SubscriptionCollection(
                            `object` : String,
-                           total_count : Int,
-                           has_more : Boolean,
+                           totalCount : Int,
+                           hasMore : Boolean,
                            url : String,
                            data : List[Option[Subscription]]
                            )
@@ -220,8 +233,8 @@ case class SubscriptionCollection(
 case class Card(
   last4: Option[String] = None,
   `object`: Option[String] = None,
-  exp_month: Option[Int] = None,
-  exp_year: Option[Int] = None,
+  expMonth: Option[Int] = None,
+  expYear: Option[Int] = None,
   fingerprint: Option[String] = None,
   id: Option[String] = None,
   brand: Option[String] = None,
@@ -231,17 +244,17 @@ case class Card(
   number: Option[String] = None,
   cvc: Option[String] = None,
   customer: Option[String] = None,
-  address_line1: Option[String] = None,
-  address_line1_check: Option[String] = None,
-  address_line2: Option[String] = None,
-  address_zip: Option[String] = None,
-  address_state: Option[String] = None,
-  address_city: Option[String] = None,
-  address_country: Option[String] = None,
-  cvc_check: Option[String] = None,
-  dynamic_last4: Option[String] = None,
+  addressLine1: Option[String] = None,
+  addressLine1_check: Option[String] = None,
+  addressLine2: Option[String] = None,
+  addressZip: Option[String] = None,
+  addressState: Option[String] = None,
+  addressCity: Option[String] = None,
+  addressCountry: Option[String] = None,
+  cvcCheck: Option[String] = None,
+  dynamicLast4: Option[String] = None,
   recipient: Option[String] = None,
-  address_zip_check: Option[String] = None) extends APIResource
+  addressZipCheck: Option[String] = None) extends APIResource
 
 case class Charge(
   created: Long,
@@ -289,7 +302,7 @@ case class Customer(
   sources: Option[CardCollection],
   source: Option[Card],
   subscriptions : Option[SubscriptionCollection],
-  default_source: Option[String],
+  defaultSource: Option[String],
   email : Option[String],
   metadata : Option[Map[String,Any]],
   plan : Option[String],
@@ -297,7 +310,7 @@ case class Customer(
   delinquent: Option[Boolean],
   subscription: Option[Subscription],
   discount: Option[String],
-  account_balance: Option[Int]) extends APIResource {
+  accountBalance: Option[Int]) extends APIResource {
   def update(params: Map[String,_]): Customer = {
     request("POST", instanceURL(this.id.get), params).extract[Customer]
   }
@@ -322,7 +335,7 @@ case class CustomerCollection(count: Int, data: List[Customer])
 object Customer extends APIResource {
 
   def create( body : String ): Customer = {
-    val customer = json.parse( body ).extract[Customer]
+    val customer = getJsonAST( body ).extract[Customer]
     val params = makeParams( customer )
     request("POST", classURL, params).extract[Customer]
   }
