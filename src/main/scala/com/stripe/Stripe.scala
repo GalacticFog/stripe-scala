@@ -128,11 +128,7 @@ abstract class APIResource {
   }
 
   def request(method: String, url: String, params: Map[String,_] = Map.empty): json.JValue = {
-    //@debug
-    System.out.println( "PARAMS : " + params.toString() )
     val (rBody, rCode) = rawRequest(method, url, params)
-    //@debug
-    System.out.println( "RESPONSE : " + rBody )
     interpretResponse(rBody, rCode)
   }
 
