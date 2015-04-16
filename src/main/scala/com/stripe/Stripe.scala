@@ -188,6 +188,10 @@ abstract class APIResource {
     }
   }
 
+  def toJson = {
+    json.Serialization.write( this )
+  }
+
 
 
   def handleAPIError(rBody: String, rCode: Int, jsonAST: json.JValue) {
@@ -223,7 +227,7 @@ case class SubscriptionCollection(
                            totalCount : Int,
                            hasMore : Boolean,
                            url : String,
-                           data : List[Option[Subscription]]
+                           data : List[Subscription]
                            )
 
 case class Card(
