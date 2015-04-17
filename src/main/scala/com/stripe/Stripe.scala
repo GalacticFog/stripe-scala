@@ -410,28 +410,42 @@ case class Discount(
 }
 
 case class InvoiceItem(
-  id: String,
-  amount: Int,
-  currency: String,
-  date: Long,
-  livemode: Boolean,
+  id: Option[String],
+  `object`: Option[String],
+  amount: Option[Int],
+  date: Option[Long],
+  livemode: Option[Boolean],
+  currency : Option[String],
+  customer : Option[String],
+  discountable : Option[Boolean],
+  proration : Option[Boolean],
+  metadata : Option[Map[String,Any]],
+  period : Option[String],
+  plan : Option[String],
+  quantity : Option[Int],
+  subscription : Option[String],
   description: Option[String],
-  invoice: Option[Invoice]) extends APIResource {
+  invoice: Option[String]
+ ) extends APIResource
+{
   def update(params: Map[String,_]): InvoiceItem = {
-    request("POST", instanceURL(this.id), params).extract[InvoiceItem]
+    request("POST", instanceURL(this.id.get), params).extract[InvoiceItem]
   }
 
   def delete(): DeletedInvoiceItem = {
-    request("DELETE", instanceURL(this.id)).extract[DeletedInvoiceItem]
+    request("DELETE", instanceURL(this.id.get)).extract[DeletedInvoiceItem]
   }
 }
 
 case class DeletedInvoiceItem(id: String, deleted: Boolean)
 
-case class InvoiceItemCollection(count: Int, data: List[InvoiceItem])
+case class InvoiceItemCollection(`object` : String, total_count: Int, data: List[InvoiceItem], has_more : Boolean, url : String )
 
-object InvoiceItem extends APIResource {
-  def create(params: Map[String,_]): InvoiceItem = {
+object InvoiceItem extends APIResource
+{
+  def create( body : String ): InvoiceItem = {
+    val ii = getJsonAST( body ).extract[InvoiceItem]
+    val params = makeParams( ii )
     request("POST", classURL, params).extract[InvoiceItem]
   }
 
@@ -446,38 +460,47 @@ object InvoiceItem extends APIResource {
 
 case class InvoiceLineSubscriptionPeriod(start: Long, end: Long)
 case class InvoiceLineSubscription(plan: Plan, amount: Int, period: InvoiceLineSubscriptionPeriod)
-case class InvoiceLines(
-  subscriptions: List[InvoiceLineSubscription],
-  invoiceItems: List[InvoiceItem],
-  prorations: List[InvoiceItem]) extends APIResource {
-}
 
 case class Invoice(
-  date: Long,
+  date: Option[Long],
   // id is optional since UpcomingInvoices don't have an ID.
   id: Option[String],
-  periodStart: Long,
-  periodEnd: Long,
-  lines: InvoiceLines,
-  subtotal: Int,
-  total: Int,
-  customer: String,
-  attempted: Boolean,
-  closed: Boolean,
-  paid: Boolean,
-  livemode: Boolean,
-  attemptCount: Int,
-  amountDue: Int,
-  startingBalance: Int,
+  application_fee: Option[Int],
+  statementDescriptor: Option[String],
+  subscription: Option[String],
+  taxPercent: Option[BigDecimal],
+  periodStart: Option[Long],
+  periodEnd: Option[Long],
+  lines: Option[InvoiceItemCollection],
+  subtotal: Option[Int],
+  total: Option[Int],
+  customer: Option[String],
+  attempted: Option[Boolean],
+  closed: Option[Boolean],
+  paid: Option[Boolean],
+  forgiven: Option[Boolean],
+  livemode: Option[Boolean],
+  attemptCount: Option[Int],
+  amountDue: Option[Int],
+  currency: Option[String],
+  startingBalance: Option[Int],
   endingBalance: Option[Int],
   nextPaymentAttempt: Option[Long],
   charge: Option[String],
-  discount: Option[Discount]) {
+  discount: Option[Discount]
+) {
 }
 
 case class InvoiceCollection(count: Int, data: List[Invoice])
 
 object Invoice extends APIResource {
+
+  def create( body : String): Invoice = {
+    val invoice = getJsonAST( body )
+    val params = makeParams( invoice )
+    request("POST", classURL, params).extract[Invoice]
+  }
+
   def retrieve(id: String): Invoice = {
     request("GET", instanceURL(id)).extract[Invoice]
   }
