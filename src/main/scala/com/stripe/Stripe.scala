@@ -293,24 +293,24 @@ object Charge extends APIResource {
 }
 
 case class Customer(
-  created: Option[Long],
-  id: Option[String],
-  livemode: Option[Boolean],
-  `object`: Option[String],
-  description: Option[String],
-  currency: Option[String],
-  sources: Option[CardCollection],
-  source: Option[Card],
-  subscriptions : Option[SubscriptionCollection],
-  defaultSource: Option[String],
-  email : Option[String],
-  metadata : Option[Map[String,Any]],
-  plan : Option[String],
-  quantity: Option[String],
-  delinquent: Option[Boolean],
-  subscription: Option[Subscription],
-  discount: Option[String],
-  accountBalance: Option[Int]) extends APIResource {
+  created: Option[Long] = None,
+  id: Option[String] = None,
+  livemode: Option[Boolean] = None,
+  `object`: Option[String] = None,
+  description: Option[String] = None,
+  currency: Option[String] = None,
+  sources: Option[CardCollection] = None,
+  source: Option[Card] = None,
+  subscriptions : Option[SubscriptionCollection] = None,
+  defaultSource: Option[String] = None,
+  email : Option[String] = None,
+  metadata : Option[Map[String,Any]] = None,
+  plan : Option[String] = None,
+  quantity: Option[String] = None,
+  delinquent: Option[Boolean] = None,
+  subscription: Option[Subscription] = None,
+  discount: Option[String] = None,
+  accountBalance: Option[Int] = None ) extends APIResource {
   def update(params: Map[String,_]): Customer = {
     request("POST", instanceURL(this.id.get), params).extract[Customer]
   }
