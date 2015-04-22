@@ -219,7 +219,7 @@ case class CardCollection(
   totalCount : Int,
   hasMore : Boolean,
   url : String,
-  data : List[Option[Card]]
+  data : List[Card]
   )
 
 case class SubscriptionCollection(
