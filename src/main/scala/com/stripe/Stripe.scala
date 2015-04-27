@@ -257,6 +257,8 @@ case class Card(
   addressZipCheck: Option[String] = None) extends APIResource
 
 case class Charge(
+  `object` : String,
+  status : String,
   created: Long,
   id: String,
   livemode: Boolean,
@@ -264,13 +266,22 @@ case class Charge(
   amount: Int,
   currency: String,
   refunded: Boolean,
-  disputed: Boolean,
-  fee: Int,
-  card: Card,
+  captured : Boolean,
+  dispute : Option[Object],
+  source : Option[Card] = None,
+  balanceTransaction: Option[String],
   failureMessage: Option[String],
+  failureCode : Option[String],
+  receiptEmail : Option[String],
+  receiptNumber : Option[String],
+  applicationFee : Option[String],
+  destination : Option[String],
+  fraudDetails : Option[Object],
+  shipping : Option[Object],
   amountRefunded: Option[Int],
   customer: Option[String],
   invoice: Option[String],
+                 metadata : Option[Map[String,Object]],
   description: Option[String]) extends APIResource {
   def refund(): Charge = request("POST", "%s/refund".format(instanceURL(this.id))).extract[Charge]
 }
@@ -330,7 +341,12 @@ case class Customer(
 
 case class DeletedCustomer(id: String, deleted: Boolean)
 
-case class CustomerCollection(count: Int, data: List[Customer])
+case class CustomerCollection(
+                           `object` : String,
+                           hasMore : Boolean,
+                           url : String,
+                           data : List[Customer]
+                           )
 
 object Customer extends APIResource {
 
